@@ -4,102 +4,609 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>বাংলা Auto Subtitle Player</title>
+
 <style>
-*{box-sizing:border-box}body{margin:0;background:#0d1117;color:#fff;font-family:Arial,sans-serif}
-.wrap{max-width:900px;margin:auto;padding:14px}.title{text-align:center;font-size:25px;font-weight:700;margin:8px 0 14px}
-.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:14px;margin-bottom:12px}
-video{width:100%;display:block;background:#000;border-radius:10px;max-height:58vh}
-.sub{min-height:48px;text-align:center;font-size:23px;font-weight:700;padding:9px;text-shadow:2px 2px 4px #000}
-input[type=file]{width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid #444;background:#0d1117;color:#fff}
-button{width:100%;border:0;border-radius:9px;padding:13px;background:#238636;color:#fff;font-weight:700;font-size:17px;margin-top:12px}
-button:disabled{opacity:.5}.status{margin-top:10px;color:#bbb;line-height:1.5}.ok{color:#7ee787}.err{color:#ff7b72}
-.barbg{height:8px;background:#30363d;border-radius:10px;margin-top:10px;overflow:hidden}.bar{height:100%;width:0;background:#2f81f7}
-pre{white-space:pre-wrap;font-size:12px;color:#bbb;max-height:220px;overflow:auto}
-.note{font-size:12px;color:#8b949e;line-height:1.5}
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:#0d1117;
+  color:#fff;
+  font-family:Arial,sans-serif
+}
+
+.wrap{
+  max-width:900px;
+  margin:auto;
+  padding:14px
+}
+
+.title{
+  text-align:center;
+  font-size:25px;
+  font-weight:700;
+  margin:8px 0 14px
+}
+
+.card{
+  background:#161b22;
+  border:1px solid #30363d;
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:12px
+}
+
+video{
+  width:100%;
+  display:block;
+  background:#000;
+  border-radius:10px;
+  max-height:58vh
+}
+
+.sub{
+  min-height:48px;
+  text-align:center;
+  font-size:23px;
+  font-weight:700;
+  padding:9px;
+  text-shadow:2px 2px 4px #000
+}
+
+input[type=file]{
+  width:100%;
+  margin-top:8px;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #444;
+  background:#0d1117;
+  color:#fff
+}
+
+button{
+  width:100%;
+  border:0;
+  border-radius:9px;
+  padding:13px;
+  background:#238636;
+  color:#fff;
+  font-weight:700;
+  font-size:17px;
+  margin-top:12px
+}
+
+button:disabled{
+  opacity:.5
+}
+
+.status{
+  margin-top:10px;
+  color:#bbb;
+  line-height:1.5
+}
+
+.ok{
+  color:#7ee787
+}
+
+.err{
+  color:#ff7b72
+}
+
+.barbg{
+  height:8px;
+  background:#30363d;
+  border-radius:10px;
+  margin-top:10px;
+  overflow:hidden
+}
+
+.bar{
+  height:100%;
+  width:0;
+  background:#2f81f7;
+  transition:width .2s
+}
+
+pre{
+  white-space:pre-wrap;
+  font-size:12px;
+  color:#bbb;
+  max-height:220px;
+  overflow:auto
+}
+
+.note{
+  font-size:12px;
+  color:#8b949e;
+  line-height:1.5;
+  margin-top:8px
+}
 </style>
 </head>
+
 <body>
+
 <div class="wrap">
-<div class="title">🎬 বাংলা Auto Subtitle Player</div>
 
-<div class="card">
-  <video id="video" controls playsinline></video>
-  <div id="subtitle" class="sub">বাংলা subtitle এখানে আসবে</div>
+  <div class="title">
+    🎬 বাংলা Auto Subtitle Player
+  </div>
+
+  <div class="card">
+
+    <video id="video" controls playsinline></video>
+
+    <div id="subtitle" class="sub">
+      বাংলা subtitle এখানে আসবে
+    </div>
+
+  </div>
+
+
+  <div class="card">
+
+    <b>① ভিডিও নির্বাচন করুন</b>
+
+    <input
+      id="file"
+      type="file"
+      accept="video/*"
+    >
+
+    <button id="start">
+      🇧🇩 বাংলা Subtitle তৈরি করুন
+    </button>
+
+    <div class="barbg">
+      <div id="bar" class="bar"></div>
+    </div>
+
+    <div id="status" class="status">
+      ভিডিও নির্বাচন করে বাটনে চাপুন।
+    </div>
+
+    <div class="note">
+      API key browser-এ রাখা নেই। Backend-এর environment variable থেকে নিরাপদে Gemini API ব্যবহার হবে।
+    </div>
+
+  </div>
+
+
+  <div class="card">
+
+    <b>AI-এর subtitle</b>
+
+    <pre id="result"></pre>
+
+  </div>
+
 </div>
 
-<div class="card">
-  <b>① ভিডিও নির্বাচন করুন</b>
-  <input id="file" type="file" accept="video/*">
-  <button id="start">🇧🇩 বাংলা Subtitle তৈরি করুন</button>
-  <div class="barbg"><div id="bar" class="bar"></div></div>
-  <div id="status" class="status">ভিডিও নির্বাচন করে বাটনে চাপুন।</div>
-  <div class="note">API key এখানে রাখা নেই। Backend-এর environment variable থেকে নিরাপদে Gemini API ব্যবহার হবে।</div>
-</div>
 
-<div class="card">
-  <b>AI-এর subtitle</b>
-  <pre id="result"></pre>
-</div>
-</div>
+<script type="module">
 
-<script>
-let selectedFile=null,cues=[];
-const fileEl=document.getElementById("file"),video=document.getElementById("video");
-const sub=document.getElementById("subtitle"),status=document.getElementById("status");
-const bar=document.getElementById("bar"),result=document.getElementById("result"),btn=document.getElementById("start");
+import { upload } from
+  "https://esm.sh/@vercel/blob@2.4.0/client";
 
-fileEl.onchange=()=>{
-  selectedFile=fileEl.files[0];
-  if(!selectedFile)return;
-  video.src=URL.createObjectURL(selectedFile);
-  video.load();
-  status.textContent=`ভিডিও নেওয়া হয়েছে — ${(selectedFile.size/1024/1024).toFixed(1)} MB`;
-};
-function setStatus(t,c=""){status.className="status "+c;status.textContent=t}
-function setBar(n){bar.style.width=n+"%"}
-function parseTime(s){
-  const m=s.trim().match(/(\d+):(\d{2}):(\d{2})[,.](\d{3})/);
-  if(!m)return NaN;
-  return +m[1]*3600 + +m[2]*60 + +m[3] + +m[4]/1000;
-}
-function parseSRT(t){
-  t=t.replace(/```srt/gi,"").replace(/```/g,"").trim();
-  const out=[];
-  for(const block of t.split(/\n\s*\n/)){
-    const lines=block.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-    const i=lines.findIndex(x=>x.includes("-->"));
-    if(i<0)continue;
-    const [a,b]=lines[i].split("-->").map(x=>x.trim());
-    const start=parseTime(a),end=parseTime(b),text=lines.slice(i+1).join("\n");
-    if(Number.isFinite(start)&&Number.isFinite(end)&&text)out.push({start,end,text});
+
+let selectedFile = null;
+let cues = [];
+let blobUrl = null;
+
+
+const fileEl =
+  document.getElementById("file");
+
+const video =
+  document.getElementById("video");
+
+const sub =
+  document.getElementById("subtitle");
+
+const status =
+  document.getElementById("status");
+
+const bar =
+  document.getElementById("bar");
+
+const result =
+  document.getElementById("result");
+
+const btn =
+  document.getElementById("start");
+
+
+
+fileEl.onchange = () => {
+
+  selectedFile = fileEl.files[0];
+
+  if (!selectedFile) {
+    return;
   }
-  return out;
-}
-video.addEventListener("timeupdate",()=>{
-  const c=cues.find(x=>video.currentTime>=x.start&&video.currentTime<=x.end);
-  sub.textContent=c?c.text:"";
-});
-btn.onclick=async()=>{
-  if(!selectedFile){setStatus("❌ আগে ভিডিও নির্বাচন করুন।","err");return}
-  btn.disabled=true;cues=[];result.textContent="";sub.textContent="প্রসেসিং...";
-  try{
-    setBar(10);setStatus("⬆️ ভিডিও server-এ পাঠানো হচ্ছে...");
-    const fd=new FormData();fd.append("video",selectedFile);
-    const r=await fetch("/api/subtitle",{method:"POST",body:fd});
-    setBar(60);
-    const text=await r.text();
-    if(!r.ok)throw new Error(text||"Server error");
-    const data=JSON.parse(text);
-    result.textContent=data.srt||"";
-    cues=parseSRT(data.srt||"");
-    setBar(100);
-    if(!cues.length)throw new Error("SRT subtitle পাওয়া যায়নি।");
-    sub.textContent=cues[0].text;
-    setStatus(`✅ ${cues.length}টি বাংলা subtitle তৈরি হয়েছে। ভিডিও Play করুন।`,"ok");
-  }catch(e){
-    setBar(0);setStatus("❌ "+e.message,"err");sub.textContent="";
-  }finally{btn.disabled=false}
+
+  video.src =
+    URL.createObjectURL(selectedFile);
+
+  video.load();
+
+  const sizeMB =
+    selectedFile.size / 1024 / 1024;
+
+  status.textContent =
+    `ভিডিও নেওয়া হয়েছে — ${sizeMB.toFixed(1)} MB`;
+
+  setBar(0);
+
+  result.textContent = "";
+
+  sub.textContent =
+    "বাংলা subtitle এখানে আসবে";
 };
+
+
+
+function setStatus(text, className = "") {
+
+  status.className =
+    "status " + className;
+
+  status.textContent =
+    text;
+}
+
+
+
+function setBar(value) {
+
+  bar.style.width =
+    Math.max(0, Math.min(100, value)) + "%";
+}
+
+
+
+function parseTime(value) {
+
+  const match =
+    value.trim().match(
+      /(\d+):(\d{2}):(\d{2})[,.](\d{3})/
+    );
+
+  if (!match) {
+    return NaN;
+  }
+
+  return (
+    Number(match[1]) * 3600 +
+    Number(match[2]) * 60 +
+    Number(match[3]) +
+    Number(match[4]) / 1000
+  );
+}
+
+
+
+function parseSRT(text) {
+
+  text = text
+    .replace(/```srt/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  const output = [];
+
+  const blocks =
+    text.split(/\n\s*\n/);
+
+  for (const block of blocks) {
+
+    const lines =
+      block
+        .split(/\r?\n/)
+        .map(x => x.trim())
+        .filter(Boolean);
+
+    const index =
+      lines.findIndex(
+        x => x.includes("-->")
+      );
+
+    if (index < 0) {
+      continue;
+    }
+
+    const parts =
+      lines[index]
+        .split("-->")
+        .map(x => x.trim());
+
+    if (parts.length !== 2) {
+      continue;
+    }
+
+    const start =
+      parseTime(parts[0]);
+
+    const end =
+      parseTime(parts[1]);
+
+    const subtitleText =
+      lines
+        .slice(index + 1)
+        .join("\n");
+
+    if (
+      Number.isFinite(start) &&
+      Number.isFinite(end) &&
+      subtitleText
+    ) {
+
+      output.push({
+        start,
+        end,
+        text: subtitleText
+      });
+
+    }
+  }
+
+  return output;
+}
+
+
+
+video.addEventListener(
+  "timeupdate",
+  () => {
+
+    const current =
+      cues.find(
+        item =>
+          video.currentTime >= item.start &&
+          video.currentTime <= item.end
+      );
+
+    sub.textContent =
+      current
+        ? current.text
+        : "";
+  }
+);
+
+
+
+btn.onclick = async () => {
+
+  if (!selectedFile) {
+
+    setStatus(
+      "❌ আগে ভিডিও নির্বাচন করুন।",
+      "err"
+    );
+
+    return;
+  }
+
+
+  btn.disabled = true;
+
+  cues = [];
+
+  result.textContent = "";
+
+  sub.textContent =
+    "প্রসেসিং...";
+
+  setBar(0);
+
+
+  try {
+
+    /*
+      STEP 1
+      Browser → Vercel Blob
+    */
+
+    setStatus(
+      "⬆️ ভিডিও সরাসরি Cloud Storage-এ upload হচ্ছে..."
+    );
+
+    setBar(5);
+
+
+    const pathname =
+      `videos/${Date.now()}-${selectedFile.name}`;
+
+
+    const blob =
+      await upload(
+        pathname,
+        selectedFile,
+        {
+          access: "public",
+
+          handleUploadUrl:
+            "/api/blob-upload",
+
+          multipart: true,
+
+          onUploadProgress(event) {
+
+            const percent =
+              event.percentage || 0;
+
+            setBar(
+              Math.round(
+                5 + percent * 0.45
+              )
+            );
+
+            setStatus(
+              `⬆️ ভিডিও upload হচ্ছে... ${Math.round(percent)}%`
+            );
+
+          }
+        }
+      );
+
+
+    blobUrl =
+      blob.url;
+
+
+    console.log(
+      "Blob URL:",
+      blobUrl
+    );
+
+
+    setBar(50);
+
+    setStatus(
+      "✅ ভিডিও upload হয়েছে। এখন Gemini subtitle তৈরি করছে..."
+    );
+
+
+    /*
+      STEP 2
+      শুধু Blob URL backend-এ পাঠানো হবে
+
+      এখানে আর ভিডিও file পাঠানো হচ্ছে না।
+    */
+
+    const response =
+      await fetch(
+        "/api/subtitle",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+
+            blobUrl:
+              blobUrl,
+
+            mimeType:
+              selectedFile.type ||
+              blob.contentType ||
+              "video/mp4",
+
+            fileName:
+              selectedFile.name
+
+          })
+        }
+      );
+
+
+    setBar(60);
+
+
+    const text =
+      await response.text();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        text ||
+        "Subtitle server error"
+      );
+
+    }
+
+
+    let data;
+
+    try {
+
+      data =
+        JSON.parse(text);
+
+    } catch {
+
+      throw new Error(
+        text ||
+        "Server থেকে ভুল response এসেছে।"
+      );
+
+    }
+
+
+    const srt =
+      data.srt || "";
+
+
+    if (!srt) {
+
+      throw new Error(
+        "Gemini কোনো subtitle ফেরত দেয়নি।"
+      );
+
+    }
+
+
+    result.textContent =
+      srt;
+
+
+    cues =
+      parseSRT(srt);
+
+
+    setBar(100);
+
+
+    if (!cues.length) {
+
+      throw new Error(
+        "SRT subtitle পাওয়া যায়নি।"
+      );
+
+    }
+
+
+    sub.textContent =
+      cues[0].text;
+
+
+    setStatus(
+      `✅ ${cues.length}টি বাংলা subtitle তৈরি হয়েছে। ভিডিও Play করুন।`,
+      "ok"
+    );
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    setBar(0);
+
+    setStatus(
+      "❌ " +
+      (
+        error.message ||
+        "কিছু একটা সমস্যা হয়েছে।"
+      ),
+      "err"
+    );
+
+    sub.textContent = "";
+
+  } finally {
+
+    btn.disabled = false;
+
+  }
+
+};
+
 </script>
+
 </body>
 </html>
