@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@google/genai": "^1.30.0",
+    "@vercel/blob": "latest",
     "formidable": "^3.5.4"
   }
 }
