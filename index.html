@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>বাংলা Auto Subtitle Player</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0d1117;color:#fff;font-family:Arial,sans-serif}
+.wrap{max-width:900px;margin:auto;padding:14px}.title{text-align:center;font-size:25px;font-weight:700;margin:8px 0 14px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:14px;margin-bottom:12px}
+video{width:100%;display:block;background:#000;border-radius:10px;max-height:58vh}
+.sub{min-height:48px;text-align:center;font-size:23px;font-weight:700;padding:9px;text-shadow:2px 2px 4px #000}
+input[type=file]{width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid #444;background:#0d1117;color:#fff}
+button{width:100%;border:0;border-radius:9px;padding:13px;background:#238636;color:#fff;font-weight:700;font-size:17px;margin-top:12px}
+button:disabled{opacity:.5}.status{margin-top:10px;color:#bbb;line-height:1.5}.ok{color:#7ee787}.err{color:#ff7b72}
+.barbg{height:8px;background:#30363d;border-radius:10px;margin-top:10px;overflow:hidden}.bar{height:100%;width:0;background:#2f81f7}
+pre{white-space:pre-wrap;font-size:12px;color:#bbb;max-height:220px;overflow:auto}
+.note{font-size:12px;color:#8b949e;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="title">🎬 বাংলা Auto Subtitle Player</div>
+
+<div class="card">
+  <video id="video" controls playsinline></video>
+  <div id="subtitle" class="sub">বাংলা subtitle এখানে আসবে</div>
+</div>
+
+<div class="card">
+  <b>① ভিডিও নির্বাচন করুন</b>
+  <input id="file" type="file" accept="video/*">
+  <button id="start">🇧🇩 বাংলা Subtitle তৈরি করুন</button>
+  <div class="barbg"><div id="bar" class="bar"></div></div>
+  <div id="status" class="status">ভিডিও নির্বাচন করে বাটনে চাপুন।</div>
+  <div class="note">API key এখানে রাখা নেই। Backend-এর environment variable থেকে নিরাপদে Gemini API ব্যবহার হবে।</div>
+</div>
+
+<div class="card">
+  <b>AI-এর subtitle</b>
+  <pre id="result"></pre>
+</div>
+</div>
+
+<script>
+let selectedFile=null,cues=[];
+const fileEl=document.getElementById("file"),video=document.getElementById("video");
+const sub=document.getElementById("subtitle"),status=document.getElementById("status");
+const bar=document.getElementById("bar"),result=document.getElementById("result"),btn=document.getElementById("start");
+
+fileEl.onchange=()=>{
+  selectedFile=fileEl.files[0];
+  if(!selectedFile)return;
+  video.src=URL.createObjectURL(selectedFile);
+  video.load();
+  status.textContent=`ভিডিও নেওয়া হয়েছে — ${(selectedFile.size/1024/1024).toFixed(1)} MB`;
+};
+function setStatus(t,c=""){status.className="status "+c;status.textContent=t}
+function setBar(n){bar.style.width=n+"%"}
+function parseTime(s){
+  const m=s.trim().match(/(\d+):(\d{2}):(\d{2})[,.](\d{3})/);
+  if(!m)return NaN;
+  return +m[1]*3600 + +m[2]*60 + +m[3] + +m[4]/1000;
+}
+function parseSRT(t){
+  t=t.replace(/```srt/gi,"").replace(/```/g,"").trim();
+  const out=[];
+  for(const block of t.split(/\n\s*\n/)){
+    const lines=block.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    const i=lines.findIndex(x=>x.includes("-->"));
+    if(i<0)continue;
+    const [a,b]=lines[i].split("-->").map(x=>x.trim());
+    const start=parseTime(a),end=parseTime(b),text=lines.slice(i+1).join("\n");
+    if(Number.isFinite(start)&&Number.isFinite(end)&&text)out.push({start,end,text});
+  }
+  return out;
+}
+video.addEventListener("timeupdate",()=>{
+  const c=cues.find(x=>video.currentTime>=x.start&&video.currentTime<=x.end);
+  sub.textContent=c?c.text:"";
+});
+btn.onclick=async()=>{
+  if(!selectedFile){setStatus("❌ আগে ভিডিও নির্বাচন করুন।","err");return}
+  btn.disabled=true;cues=[];result.textContent="";sub.textContent="প্রসেসিং...";
+  try{
+    setBar(10);setStatus("⬆️ ভিডিও server-এ পাঠানো হচ্ছে...");
+    const fd=new FormData();fd.append("video",selectedFile);
+    const r=await fetch("/api/subtitle",{method:"POST",body:fd});
+    setBar(60);
+    const text=await r.text();
+    if(!r.ok)throw new Error(text||"Server error");
+    const data=JSON.parse(text);
+    result.textContent=data.srt||"";
+    cues=parseSRT(data.srt||"");
+    setBar(100);
+    if(!cues.length)throw new Error("SRT subtitle পাওয়া যায়নি।");
+    sub.textContent=cues[0].text;
+    setStatus(`✅ ${cues.length}টি বাংলা subtitle তৈরি হয়েছে। ভিডিও Play করুন।`,"ok");
+  }catch(e){
+    setBar(0);setStatus("❌ "+e.message,"err");sub.textContent="";
+  }finally{btn.disabled=false}
+};
+</script>
+</body>
+</html>

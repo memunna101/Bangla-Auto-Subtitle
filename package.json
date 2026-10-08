@@ -1,0 +1,9 @@
+{
+  "name": "bangla-auto-subtitle-player",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@google/genai": "^1.30.0",
+    "formidable": "^3.5.4"
+  }
+}

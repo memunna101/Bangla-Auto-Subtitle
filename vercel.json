@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/subtitle.js": {
+      "maxDuration": 300
+    }
+  }
+}
