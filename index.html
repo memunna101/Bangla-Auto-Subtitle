@@ -53,7 +53,8 @@ video{
   text-shadow:2px 2px 4px #000
 }
 
-input[type=file]{
+input[type=file],
+input[type=password]{
   width:100%;
   margin-top:8px;
   padding:10px;
@@ -85,13 +86,8 @@ button:disabled{
   line-height:1.5
 }
 
-.ok{
-  color:#7ee787
-}
-
-.err{
-  color:#ff7b72
-}
+.ok{color:#7ee787}
+.err{color:#ff7b72}
 
 .barbg{
   height:8px;
@@ -129,480 +125,739 @@ pre{
 
 <div class="wrap">
 
-  <div class="title">
-    🎬 বাংলা Auto Subtitle Player
-  </div>
+<div class="title">
+🎬 বাংলা Auto Subtitle Player
+</div>
 
-  <div class="card">
+<div class="card">
 
-    <video id="video" controls playsinline></video>
+<video id="video" controls playsinline></video>
 
-    <div id="subtitle" class="sub">
-      বাংলা subtitle এখানে আসবে
-    </div>
-
-  </div>
-
-
-  <div class="card">
-
-    <b>① ভিডিও নির্বাচন করুন</b>
-
-    <input
-      id="file"
-      type="file"
-      accept="video/*"
-    >
-
-    <button id="start">
-      🇧🇩 বাংলা Subtitle তৈরি করুন
-    </button>
-
-    <div class="barbg">
-      <div id="bar" class="bar"></div>
-    </div>
-
-    <div id="status" class="status">
-      ভিডিও নির্বাচন করে বাটনে চাপুন।
-    </div>
-
-    <div class="note">
-      API key browser-এ রাখা নেই। Backend-এর environment variable থেকে নিরাপদে Gemini API ব্যবহার হবে।
-    </div>
-
-  </div>
-
-
-  <div class="card">
-
-    <b>AI-এর subtitle</b>
-
-    <pre id="result"></pre>
-
-  </div>
+<div id="subtitle" class="sub">
+বাংলা subtitle এখানে আসবে
+</div>
 
 </div>
 
 
-<script type="module">
+<div class="card">
 
-import { upload } from
-  "https://esm.sh/@vercel/blob@2.4.0/client";
+<b>🔑 Gemini API Key</b>
 
+<input
+  id="apiKey"
+  type="password"
+  placeholder="Gemini API Key এখানে দিন"
+/>
+
+<div class="note">
+API key শুধু এই browser session-এ ব্যবহার হবে। কাউকে শেয়ার করবেন না।
+</div>
+
+<b style="display:block;margin-top:14px">
+① ভিডিও নির্বাচন করুন
+</b>
+
+<input
+  id="file"
+  type="file"
+  accept="video/*"
+>
+
+<button id="start">
+🇧🇩 বাংলা Subtitle তৈরি করুন
+</button>
+
+<div class="barbg">
+<div id="bar" class="bar"></div>
+</div>
+
+<div id="status" class="status">
+API key এবং ভিডিও নির্বাচন করে বাটনে চাপুন।
+</div>
+
+</div>
+
+
+<div class="card">
+
+<b>AI-এর subtitle</b>
+
+<pre id="result"></pre>
+
+</div>
+
+</div>
+
+
+<script>
 
 let selectedFile = null;
 let cues = [];
-let blobUrl = null;
-
 
 const fileEl =
-  document.getElementById("file");
+document.getElementById("file");
 
 const video =
-  document.getElementById("video");
+document.getElementById("video");
 
 const sub =
-  document.getElementById("subtitle");
+document.getElementById("subtitle");
 
 const status =
-  document.getElementById("status");
+document.getElementById("status");
 
 const bar =
-  document.getElementById("bar");
+document.getElementById("bar");
 
 const result =
-  document.getElementById("result");
+document.getElementById("result");
 
 const btn =
-  document.getElementById("start");
-
+document.getElementById("start");
 
 
 fileEl.onchange = () => {
 
-  selectedFile = fileEl.files[0];
+selectedFile = fileEl.files[0];
 
-  if (!selectedFile) {
-    return;
-  }
+if (!selectedFile) return;
 
-  video.src =
-    URL.createObjectURL(selectedFile);
+video.src =
+URL.createObjectURL(selectedFile);
 
-  video.load();
+video.load();
 
-  const sizeMB =
-    selectedFile.size / 1024 / 1024;
+const sizeGB =
+selectedFile.size / 1024 / 1024 / 1024;
 
-  status.textContent =
-    `ভিডিও নেওয়া হয়েছে — ${sizeMB.toFixed(1)} MB`;
+status.textContent =
+`ভিডিও নেওয়া হয়েছে — ${sizeGB.toFixed(2)} GB`;
 
-  setBar(0);
+setBar(0);
 
-  result.textContent = "";
+result.textContent = "";
 
-  sub.textContent =
-    "বাংলা subtitle এখানে আসবে";
+sub.textContent =
+"বাংলা subtitle এখানে আসবে";
+
 };
 
 
+function setStatus(text,className=""){
 
-function setStatus(text, className = "") {
+status.className =
+"status " + className;
 
-  status.className =
-    "status " + className;
+status.textContent =
+text;
 
-  status.textContent =
-    text;
 }
 
 
+function setBar(value){
 
-function setBar(value) {
+bar.style.width =
+Math.max(0,Math.min(100,value)) + "%";
 
-  bar.style.width =
-    Math.max(0, Math.min(100, value)) + "%";
 }
 
 
+function parseTime(value){
 
-function parseTime(value) {
+const match =
+value.trim().match(
+/(\d+):(\d{2}):(\d{2})[,.](\d{3})/
+);
 
-  const match =
-    value.trim().match(
-      /(\d+):(\d{2}):(\d{2})[,.](\d{3})/
-    );
+if(!match) return NaN;
 
-  if (!match) {
-    return NaN;
-  }
+return (
+Number(match[1]) * 3600 +
+Number(match[2]) * 60 +
+Number(match[3]) +
+Number(match[4]) / 1000
+);
 
-  return (
-    Number(match[1]) * 3600 +
-    Number(match[2]) * 60 +
-    Number(match[3]) +
-    Number(match[4]) / 1000
-  );
 }
 
 
+function parseSRT(text){
 
-function parseSRT(text) {
+text =
+text
+.replace(/```srt/gi,"")
+.replace(/```/g,"")
+.trim();
 
-  text = text
-    .replace(/```srt/gi, "")
-    .replace(/```/g, "")
-    .trim();
+const output=[];
 
-  const output = [];
+const blocks =
+text.split(/\r?\n\s*\r?\n/);
 
-  const blocks =
-    text.split(/\n\s*\n/);
+for(const block of blocks){
 
-  for (const block of blocks) {
+const lines =
+block
+.split(/\r?\n/)
+.map(x=>x.trim())
+.filter(Boolean);
 
-    const lines =
-      block
-        .split(/\r?\n/)
-        .map(x => x.trim())
-        .filter(Boolean);
+const index =
+lines.findIndex(
+x=>x.includes("-->")
+);
 
-    const index =
-      lines.findIndex(
-        x => x.includes("-->")
-      );
+if(index < 0) continue;
 
-    if (index < 0) {
-      continue;
-    }
+const parts =
+lines[index]
+.split("-->")
+.map(x=>x.trim());
 
-    const parts =
-      lines[index]
-        .split("-->")
-        .map(x => x.trim());
+if(parts.length !== 2) continue;
 
-    if (parts.length !== 2) {
-      continue;
-    }
+const start =
+parseTime(parts[0]);
 
-    const start =
-      parseTime(parts[0]);
+const end =
+parseTime(parts[1]);
 
-    const end =
-      parseTime(parts[1]);
+const subtitleText =
+lines
+.slice(index+1)
+.join("\n");
 
-    const subtitleText =
-      lines
-        .slice(index + 1)
-        .join("\n");
+if(
+Number.isFinite(start) &&
+Number.isFinite(end) &&
+subtitleText
+){
 
-    if (
-      Number.isFinite(start) &&
-      Number.isFinite(end) &&
-      subtitleText
-    ) {
+output.push({
+start,
+end,
+text:subtitleText
+});
 
-      output.push({
-        start,
-        end,
-        text: subtitleText
-      });
-
-    }
-  }
-
-  return output;
 }
 
+}
+
+return output;
+
+}
 
 
 video.addEventListener(
-  "timeupdate",
-  () => {
+"timeupdate",
+()=>{
 
-    const current =
-      cues.find(
-        item =>
-          video.currentTime >= item.start &&
-          video.currentTime <= item.end
-      );
+const current =
+cues.find(
+item =>
+video.currentTime >= item.start &&
+video.currentTime <= item.end
+);
 
-    sub.textContent =
-      current
-        ? current.text
-        : "";
-  }
+sub.textContent =
+current
+? current.text
+: "";
+
+}
 );
 
 
+/* =========================
+   GEMINI FILE UPLOAD
+========================= */
 
-btn.onclick = async () => {
+async function uploadToGemini(
+file,
+apiKey
+){
 
-  if (!selectedFile) {
+const base =
+"https://generativelanguage.googleapis.com";
 
-    setStatus(
-      "❌ আগে ভিডিও নির্বাচন করুন।",
-      "err"
-    );
 
-    return;
-  }
+setStatus(
+"⬆️ Gemini-তে ভিডিও upload শুরু হচ্ছে..."
+);
 
+setBar(5);
 
-  btn.disabled = true;
 
-  cues = [];
+/*
+STEP 1
+Start resumable upload
+*/
 
-  result.textContent = "";
+const startResponse =
+await fetch(
+`${base}/upload/v1beta/files?key=${encodeURIComponent(apiKey)}`,
+{
+method:"POST",
 
-  sub.textContent =
-    "প্রসেসিং...";
+headers:{
+"X-Goog-Upload-Protocol":"resumable",
+"X-Goog-Upload-Command":"start",
+"X-Goog-Upload-Header-Content-Length":
+String(file.size),
+"X-Goog-Upload-Header-Content-Type":
+file.type || "video/mp4",
+"Content-Type":
+"application/json"
+},
 
-  setBar(0);
+body:JSON.stringify({
+file:{
+display_name:
+file.name
+}
+})
+}
+);
 
 
-  try {
+if(!startResponse.ok){
 
-    /*
-      STEP 1
-      Browser → Vercel Blob
-    */
+const errorText =
+await startResponse.text();
 
-    setStatus(
-      "⬆️ ভিডিও সরাসরি Cloud Storage-এ upload হচ্ছে..."
-    );
+throw new Error(
+"Gemini upload শুরু করতে পারেনি: " +
+errorText
+);
 
-    setBar(5);
+}
 
 
-    const pathname =
-      `videos/${Date.now()}-${selectedFile.name}`;
+/*
+Gemini returns resumable upload URL
+*/
 
+const uploadUrl =
+startResponse.headers.get(
+"X-Goog-Upload-URL"
+);
 
-    const blob =
-      await upload(
-        pathname,
-        selectedFile,
-        {
-          access: "public",
 
-          handleUploadUrl:
-            "/api/blob-upload",
+if(!uploadUrl){
 
-          multipart: true,
+throw new Error(
+"Gemini upload URL পাওয়া যায়নি।"
+);
 
-          onUploadProgress(event) {
+}
 
-            const percent =
-              event.percentage || 0;
 
-            setBar(
-              Math.round(
-                5 + percent * 0.45
-              )
-            );
+setBar(10);
 
-            setStatus(
-              `⬆️ ভিডিও upload হচ্ছে... ${Math.round(percent)}%`
-            );
 
-          }
-        }
-      );
+/*
+STEP 2
+Upload actual video
+*/
 
+const uploadResponse =
+await fetch(
+uploadUrl,
+{
+method:"POST",
 
-    blobUrl =
-      blob.url;
+headers:{
+"Content-Length":
+String(file.size),
 
+"X-Goog-Upload-Offset":"0",
 
-    console.log(
-      "Blob URL:",
-      blobUrl
-    );
+"X-Goog-Upload-Command":
+"upload, finalize"
+},
 
+body:file
+}
+);
 
-    setBar(50);
 
-    setStatus(
-      "✅ ভিডিও upload হয়েছে। এখন Gemini subtitle তৈরি করছে..."
-    );
+if(!uploadResponse.ok){
 
+const errorText =
+await uploadResponse.text();
 
-    /*
-      STEP 2
-      শুধু Blob URL backend-এ পাঠানো হবে
+throw new Error(
+"Gemini video upload failed: " +
+errorText
+);
 
-      এখানে আর ভিডিও file পাঠানো হচ্ছে না।
-    */
+}
 
-    const response =
-      await fetch(
-        "/api/subtitle",
-        {
-          method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
+setBar(60);
 
-          body: JSON.stringify({
+setStatus(
+"⏳ Gemini ভিডিও processing করছে..."
+);
 
-            blobUrl:
-              blobUrl,
 
-            mimeType:
-              selectedFile.type ||
-              blob.contentType ||
-              "video/mp4",
+const uploadData =
+await uploadResponse.json();
 
-            fileName:
-              selectedFile.name
 
-          })
-        }
-      );
+return uploadData.file;
 
+}
 
-    setBar(60);
 
+/*
+=========================
+WAIT FOR GEMINI FILE
+=========================
+*/
 
-    const text =
-      await response.text();
+async function waitForFile(
+file,
+apiKey
+){
 
+let current = file;
 
-    if (!response.ok) {
+for(let i=0;i<120;i++){
 
-      throw new Error(
-        text ||
-        "Subtitle server error"
-      );
+const response =
+await fetch(
+`https://generativelanguage.googleapis.com/v1beta/${current.name}?key=${encodeURIComponent(apiKey)}`
+);
 
-    }
+if(!response.ok){
 
+const text =
+await response.text();
 
-    let data;
+throw new Error(
+"Gemini file status পাওয়া যায়নি: " +
+text
+);
 
-    try {
+}
 
-      data =
-        JSON.parse(text);
+current =
+await response.json();
 
-    } catch {
+if(current.state === "ACTIVE"){
 
-      throw new Error(
-        text ||
-        "Server থেকে ভুল response এসেছে।"
-      );
+setBar(70);
 
-    }
+return current;
 
+}
 
-    const srt =
-      data.srt || "";
+if(current.state === "FAILED"){
 
+throw new Error(
+"Gemini ভিডিও processing করতে পারেনি।"
+);
 
-    if (!srt) {
+}
 
-      throw new Error(
-        "Gemini কোনো subtitle ফেরত দেয়নি।"
-      );
+setStatus(
+`⏳ Gemini ভিডিও processing করছে... ${Math.min(70 + i,90)}%`
+);
 
-    }
+setBar(
+Math.min(70 + i * 0.15,90)
+);
 
+await new Promise(
+resolve =>
+setTimeout(resolve,3000)
+);
 
-    result.textContent =
-      srt;
+}
 
+throw new Error(
+"Gemini processing করতে অনেক বেশি সময় লাগছে।"
+);
 
-    cues =
-      parseSRT(srt);
+}
 
 
-    setBar(100);
+/*
+=========================
+GENERATE SRT
+=========================
+*/
 
+async function generateSubtitle(
+file,
+apiKey
+){
 
-    if (!cues.length) {
+setStatus(
+"🤖 Gemini বাংলা subtitle তৈরি করছে..."
+);
 
-      throw new Error(
-        "SRT subtitle পাওয়া যায়নি।"
-      );
+setBar(92);
 
-    }
 
+const prompt = `
 
-    sub.textContent =
-      cues[0].text;
+Analyze the speech/audio in this video.
 
+Create accurate Bengali subtitles for ALL spoken dialogue.
 
-    setStatus(
-      `✅ ${cues.length}টি বাংলা subtitle তৈরি হয়েছে। ভিডিও Play করুন।`,
-      "ok"
-    );
+Translate English, Hindi, or any other spoken language
+into natural Bengali.
 
+If the speech is already Bengali,
+keep it natural Bengali.
 
-  } catch (error) {
+Do not invent dialogue.
 
-    console.error(error);
+Synchronize every subtitle closely with the speech.
 
-    setBar(0);
+Return ONLY valid SRT format.
 
-    setStatus(
-      "❌ " +
-      (
-        error.message ||
-        "কিছু একটা সমস্যা হয়েছে।"
-      ),
-      "err"
-    );
+Example:
 
-    sub.textContent = "";
+1
+00:00:00,000 --> 00:00:02,000
+বাংলা লেখা
 
-  } finally {
+2
+00:00:02,000 --> 00:00:05,000
+পরবর্তী বাংলা লেখা
 
-    btn.disabled = false;
+Keep each subtitle short,
+normally 1-2 lines.
 
-  }
+Include timestamps throughout
+the entire spoken portion.
+
+`;
+
+
+const response =
+await fetch(
+`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json"
+},
+
+body:JSON.stringify({
+
+contents:[
+
+{
+role:"user",
+
+parts:[
+
+{
+text:prompt
+},
+
+{
+file_data:{
+file_uri:file.uri,
+mime_type:file.mimeType
+}
+}
+
+]
+
+}
+
+]
+
+})
+}
+);
+
+
+if(!response.ok){
+
+const text =
+await response.text();
+
+throw new Error(
+"Gemini subtitle error: " +
+text
+);
+
+}
+
+
+const data =
+await response.json();
+
+
+const text =
+data?.candidates?.[0]?.content?.parts
+?.map(part=>part.text || "")
+.join("")
+.trim();
+
+
+if(!text){
+
+throw new Error(
+"Gemini কোনো subtitle ফেরত দেয়নি।"
+);
+
+}
+
+
+return text;
+
+}
+
+
+/*
+=========================
+MAIN BUTTON
+=========================
+*/
+
+btn.onclick =
+async () => {
+
+const apiKey =
+document
+.getElementById("apiKey")
+.value
+.trim();
+
+
+if(!apiKey){
+
+setStatus(
+"❌ আগে Gemini API Key দিন।",
+"err"
+);
+
+return;
+
+}
+
+
+if(!selectedFile){
+
+setStatus(
+"❌ আগে ভিডিও নির্বাচন করুন।",
+"err"
+);
+
+return;
+
+}
+
+
+btn.disabled = true;
+
+cues=[];
+
+result.textContent="";
+
+sub.textContent=
+"প্রসেসিং...";
+
+setBar(0);
+
+
+try{
+
+
+/*
+1. Gemini upload
+*/
+
+const uploaded =
+await uploadToGemini(
+selectedFile,
+apiKey
+);
+
+
+/*
+2. Wait until ACTIVE
+*/
+
+const activeFile =
+await waitForFile(
+uploaded,
+apiKey
+);
+
+
+/*
+3. Generate Bengali SRT
+*/
+
+const srt =
+await generateSubtitle(
+activeFile,
+apiKey
+);
+
+
+result.textContent =
+srt;
+
+
+cues =
+parseSRT(srt);
+
+
+if(!cues.length){
+
+throw new Error(
+"SRT subtitle পাওয়া যায়নি।"
+);
+
+}
+
+
+setBar(100);
+
+sub.textContent =
+cues[0].text;
+
+
+setStatus(
+`✅ ${cues.length}টি বাংলা subtitle তৈরি হয়েছে। ভিডিও Play করুন।`,
+"ok"
+);
+
+
+}
+catch(error){
+
+console.error(error);
+
+setBar(0);
+
+setStatus(
+"❌ " +
+(error.message ||
+"কিছু একটা সমস্যা হয়েছে।"),
+"err"
+);
+
+sub.textContent="";
+
+}
+finally{
+
+btn.disabled=false;
+
+}
 
 };
 
